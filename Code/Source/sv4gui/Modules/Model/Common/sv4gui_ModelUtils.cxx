@@ -55,6 +55,10 @@
 #include <vtkCenterOfMass.h>
 
 #include "vtkXMLPolyDataWriter.h"
+#include <vtkXMLPolyDataReader.h>
+
+#include <iostream>
+#include <string>
 
 vtkPolyData* sv4guiModelUtils::CreatePolyData(std::vector<sv4guiContourGroup*> groups, std::vector<vtkPolyData*> vtps, int numSamplingPts, svLoftingParam *param, unsigned int t, int noInterOut, double tol)
 {
@@ -975,11 +979,11 @@ bool sv4guiModelUtils::DeleteRegions(vtkSmartPointer<vtkPolyData> inpd, std::vec
 //-------------------
 // Compute the centerlines for the given model.
 //
-// Note: Model caps are removed and replaced with new geometry. It is not clear why this 
-// is done, perhaps to produce a better geometry for centerline computation; the new caps 
+// Note: Model caps are removed and replaced with new geometry. It is not clear why this
+// is done, perhaps to produce a better geometry for centerline computation; the new caps
 // are defined with a single node in the center of the model face.
 //
-vtkPolyData* 
+vtkPolyData*
 sv4guiModelUtils::CreateCenterlines(sv4guiModelElement* modelElement, vtkIdList *sourceCapIds, bool getSections)
 {
     if(modelElement==NULL || modelElement->GetWholeVtkPolyData()==NULL) {
@@ -1041,9 +1045,9 @@ sv4guiModelUtils::CreateCenterlines(sv4guiModelElement* modelElement, vtkIdList 
         targetPtIds->InsertNextId(capCenterIds[i]);
       }
 
-    // Get the node IDs closest to the cap centers. 
+    // Get the node IDs closest to the cap centers.
     //
-    // capFaceId's are added to a map to produce a sorted list. 
+    // capFaceId's are added to a map to produce a sorted list.
     //
     } else {
       auto locator = vtkSmartPointer<vtkCellLocator>::New();
@@ -1068,7 +1072,7 @@ sv4guiModelUtils::CreateCenterlines(sv4guiModelElement* modelElement, vtkIdList 
       }
 
       // Add point IDs to the source and target lists.
-      for (auto face : facePtIdMap) { 
+      for (auto face : facePtIdMap) {
         int capFaceId = face.first;
         int ptId = face.second;
         if (sourceCapIds->IsId(capFaceId) != -1) {
@@ -1158,13 +1162,13 @@ vtkPolyData* sv4guiModelUtils::CreateCenterlines(vtkPolyData* inpd,
     for (int i=0; i<numTargetPts; i++)
       targets[i]=targetPtIds->GetId(i);
 
-    if ( sys_geom_centerlines(src, sources, numSourcePts, targets, numTargetPts, &tempCenterlines, &voronoi) != SV_OK )
-    {
-        delete src;
-        delete [] sources;
-        delete [] targets;
-        return NULL;
-    }
+    // if ( sys_geom_centerlines(src, sources, numSourcePts, targets, numTargetPts, &tempCenterlines, &voronoi) != SV_OK )
+    // {
+    //     delete src;
+    //     delete [] sources;
+    //     delete [] targets;
+    //     return NULL;
+    // }
     delete src;
     delete voronoi;
     delete [] sources;
@@ -1178,7 +1182,7 @@ vtkPolyData* sv4guiModelUtils::CreateCenterlines(vtkPolyData* inpd,
     }
     delete tempCenterlines;
 
-    return centerlines->GetVtkPolyData();
+    return 0;
 }
 
 vtkPolyData* sv4guiModelUtils::CreateCenterlineSections(vtkPolyData* inpd,
@@ -1187,7 +1191,47 @@ vtkPolyData* sv4guiModelUtils::CreateCenterlineSections(vtkPolyData* inpd,
 {
     if(inpd==NULL)
         return NULL;
-
+    // Ricardo Edits
+    // Uncomment from here
+    // cvPolyData *src = new cvPolyData(inpd);
+    // cvPolyData *tempCenterlines = NULL;
+    // cvPolyData *voronoi = NULL;
+    //
+    // int numSourcePts = sourcePtIds->GetNumberOfIds();
+    // int *sources=new int[numSourcePts];
+    // for (int i=0; i<numSourcePts; i++)
+    //   sources[i]=sourcePtIds->GetId(i);
+    //
+    // int numTargetPts = targetPtIds->GetNumberOfIds();
+    // int *targets=new int[numTargetPts];
+    // for (int i=0; i<numTargetPts; i++)
+    //   targets[i]=targetPtIds->GetId(i);
+    //
+    // if ( sys_geom_centerlines(src, sources, numSourcePts, targets, numTargetPts, &tempCenterlines, &voronoi) != SV_OK )
+    // {
+    //     delete src;
+    //     delete [] sources;
+    //     delete [] targets;
+    //     return NULL;
+    // }
+    // delete voronoi;
+    // delete [] sources;
+    // delete [] targets;
+    //
+    // cvPolyData *centerlines=NULL;
+    // cvPolyData *surf_grouped=NULL;
+    // cvPolyData *sections=NULL;
+    // if ( sys_geom_centerlinesections(tempCenterlines, src, &centerlines, &surf_grouped, &sections) != SV_OK )
+    // {
+    //
+    //     delete src;
+    //     delete centerlines;
+    //     delete surf_grouped;
+    //     delete sections;
+    //     return NULL;
+    // }
+    //
+    // Addition From Ricardo to load and add arrays to the externally generate centerline
     cvPolyData *src = new cvPolyData(inpd);
     cvPolyData *tempCenterlines = NULL;
     cvPolyData *voronoi = NULL;
@@ -1202,28 +1246,57 @@ vtkPolyData* sv4guiModelUtils::CreateCenterlineSections(vtkPolyData* inpd,
     for (int i=0; i<numTargetPts; i++)
       targets[i]=targetPtIds->GetId(i);
 
-    if ( sys_geom_centerlines(src, sources, numSourcePts, targets, numTargetPts, &tempCenterlines, &voronoi) != SV_OK )
-    {
-        delete src;
-        delete [] sources;
-        delete [] targets;
-        return NULL;
-    }
-    delete voronoi;
-    delete [] sources;
-    delete [] targets;
+    std::cout << "My Edits Start " << endl;
+    vtkSmartPointer<vtkPolyData> surfaceMesh=NULL;
+    vtkSmartPointer<vtkPolyData> clMesh=NULL;
+    vtkSmartPointer<vtkXMLPolyDataReader> readersurf = vtkSmartPointer<vtkXMLPolyDataReader>::New();
+    // string surfacePath = "/home/riro3277/MTH/317_aorta_S.vtp";
 
+    readersurf->SetFileName("/home/flowlab2/Documents/MTH/P409/P409.vtp");
+    readersurf->Update();
+    surfaceMesh=readersurf->GetOutput();
+
+
+    vtkSmartPointer<vtkXMLPolyDataReader> readercl = vtkSmartPointer<vtkXMLPolyDataReader>::New();
+
+    // string clPath = "/home/riro3277/MTH/317_aorta_CL.vtp";
+    readercl->SetFileName("/home/flowlab2/Documents/MTH/P409/P409_CL_Radv2.vtp");
+    readercl->Update();
+    clMesh=readercl->GetOutput();
+
+    vtkIdType NumPoints = clMesh->GetNumberOfPoints();
+
+    std::cout << "NumPoints " << clMesh << endl;
+
+
+    cvPolyData *center = new cvPolyData(clMesh);
+    cvPolyData *surface = new cvPolyData(surfaceMesh);
+
+    // Create variables to store the generated sections
+    std::vector<double> centerlineSections; // You might use an appropriate data structure to store sections
+
+    // Call the sys_geom_centerlinesections function
     cvPolyData *centerlines=NULL;
     cvPolyData *surf_grouped=NULL;
     cvPolyData *sections=NULL;
-    if ( sys_geom_centerlinesections(tempCenterlines, src, &centerlines, &surf_grouped, &sections) != SV_OK )
-    {
-        delete src;
-        delete centerlines;
-        delete surf_grouped;
-        delete sections;
-        return NULL;
+
+    sys_geom_centerlinesections(center, surface, &centerlines, &surf_grouped, &sections);
+    // Write the output data to VTK files
+    vtkNew<vtkXMLPolyDataWriter> writer;
+    vtkPolyData *output = centerlines->GetVtkPolyData();
+    std::cout << "Writer Start" << endl;
+    writer->SetFileName("P409_CL_Final.vtp");
+    writer->SetInputData(output);
+    writer->Write();
+    std::cout << "Writer End" << endl;
+    
+    // Process or use the generated centerline sections as needed
+    // For example, you might iterate through the sections and perform further operations
+    for (const auto& section : centerlineSections) {
+        // Perform operations with each section value
     }
+    delete [] sources;
+    delete [] targets;
     delete src;
     delete surf_grouped;
     delete sections;
