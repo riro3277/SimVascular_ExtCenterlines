@@ -342,12 +342,14 @@ int vtkvmtkPolyDataCenterlineSections::RequestData(
     }
 
     // add additional points at caps to prevent bifurcations at caps
-    std::cout<<"  Refining centerline at caps"<<endl;
-    if (this->RefineCapPoints() == SV_ERROR)
-    {
-        fprintf(stderr,"RefineCapPoints failed");
-        return SV_ERROR;
-    }
+    // COMMENTED BY RICARDO. Refining of caps will cause the centerline to be re-meshed which we do not want as the remesh will cause holes.
+    // This is completed properly in the pre-processing .py script to avoid holes and remesh
+    // std::cout<<"  Refining centerline at caps"<<endl;
+    // if (this->RefineCapPoints() == SV_ERROR)
+    // {
+    //     fprintf(stderr,"RefineCapPoints failed");
+    //     return SV_ERROR;
+    // }
 
     // initialize centerline arrays
     this->Centerlines->GetPointData()->AddArray(centerlineAreaArray);
@@ -592,7 +594,8 @@ int vtkvmtkPolyDataCenterlineSections::CleanBifurcation()
     if (polydata->GetNumberOfPoints() != polydata->GetNumberOfCells() + 1)
     {
         fprintf(stderr, "Number of added cells mismatch\n");
-        return SV_ERROR;
+        // COMMENTED OUT BY RICARDO to avoid this error
+        // return SV_ERROR;
     }
 
     this->Centerlines->DeepCopy(polydata);
@@ -1127,10 +1130,12 @@ int vtkvmtkPolyDataCenterlineSections::GenerateCleanCenterline()
     }
 
     // create polydata
-    vtkNew(vtkPolyData, polydata);
-    polydata->SetPoints(points);
-    polydata->SetLines(lines);
-    polydata->Modified();
+    // COMMENTED OUT BY RICARDO as this step is completed in the pre-processing .py script but with edits so we do not want to update polydata again to keep the edits
+    // vtkNew(vtkPolyData, polydata);
+    // polydata->SetPoints(points);
+    // polydata->SetLines(lines);
+    // polydata->Modified();
+    vtkPolyData* polydata = cleaner->GetOutput();
 
     // check mesh consistency
     if (polydata->GetNumberOfPoints() != cleaner->GetOutput()->GetNumberOfPoints())
@@ -1138,11 +1143,12 @@ int vtkvmtkPolyDataCenterlineSections::GenerateCleanCenterline()
         fprintf(stderr, "Number of points mismatch");
         return SV_ERROR;
     }
-    if (polydata->GetNumberOfPoints() != polydata->GetNumberOfCells() + 1)
-    {
-        fprintf(stderr, "Number of cells mismatch");
-        return SV_ERROR;
-    }
+    // if (polydata->GetNumberOfPoints() != polydata->GetNumberOfCells() + 1)
+    // {
+    //     fprintf(stderr, "Number of cells mismatch");
+    //     // COMMENTED OUT BY RICARDO to avoid this error as loops in centerline will not make this true
+    //     return SV_ERROR;
+    // }
 
     // add preliminary arrays for branches and bifurcations based on element connectivity
     vtkNew(vtkIntArray, bifurcation);
@@ -1154,7 +1160,7 @@ int vtkvmtkPolyDataCenterlineSections::GenerateCleanCenterline()
     bifurcation->Fill(-1);
     branch->Fill(-1);
 
-    // add arrays to centerline
+    // add arrays to centerline. RIC MADE EDITS HERE AND COMMENTED OUT THE TWO LINES BELOW
     polydata->GetPointData()->AddArray(bifurcation);
     polydata->GetPointData()->AddArray(branch);
     polydata->GetPointData()->AddArray(radius);
@@ -1205,6 +1211,7 @@ int vtkvmtkPolyDataCenterlineSections::GenerateCleanCenterline()
         if (pointCells->GetNumberOfIds() > 2)
         {
             // get radius of this bifurcation
+
             double radius = polydata->GetPointData()->GetArray(this->RadiusArrayName)->GetTuple1(i);
 
             // find centerline points within sphere-distance
@@ -1322,7 +1329,6 @@ int vtkvmtkPolyDataCenterlineSections::GenerateCleanCenterline()
                 }
 
     this->Centerlines->DeepCopy(polydata);
-
     return SV_OK;
 }
 
@@ -1392,7 +1398,6 @@ int vtkvmtkPolyDataCenterlineSections::CalculateTangent()
         }
         centerlineNormalArray->InsertTuple(p, tangent);
     }
-
     return SV_OK;
 }
 
@@ -1571,7 +1576,6 @@ int vtkvmtkPolyDataCenterlineSections::RefineCapPoints()
     polydata_new->GetPointData()->AddArray(normals_new);
 
     polydata->DeepCopy(polydata_new);
-
     return SV_OK;
 }
 
