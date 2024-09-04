@@ -1189,49 +1189,56 @@ vtkPolyData* sv4guiModelUtils::CreateCenterlineSections(vtkPolyData* inpd,
                                                         vtkIdList *sourcePtIds,
                                                         vtkIdList *targetPtIds)
 {
+    // Ricardo Edits
+    // Uncomment from here for original code
+   //  if(inpd==NULL)
+   //     return NULL;
+   //
+   // cvPolyData *src = new cvPolyData(inpd);
+   // cvPolyData *tempCenterlines = NULL;
+   // cvPolyData *voronoi = NULL;
+   //
+   // int numSourcePts = sourcePtIds->GetNumberOfIds();
+   // int *sources=new int[numSourcePts];
+   // for (int i=0; i<numSourcePts; i++)
+   //   sources[i]=sourcePtIds->GetId(i);
+   //
+   // int numTargetPts = targetPtIds->GetNumberOfIds();
+   // int *targets=new int[numTargetPts];
+   // for (int i=0; i<numTargetPts; i++)
+   //   targets[i]=targetPtIds->GetId(i);
+   //
+   // if ( sys_geom_centerlines(src, sources, numSourcePts, targets, numTargetPts, &tempCenterlines, &voronoi) != SV_OK )
+   // {
+   //     delete src;
+   //     delete [] sources;
+   //     delete [] targets;
+   //     return NULL;
+   // }
+   // delete voronoi;
+   // delete [] sources;
+   // delete [] targets;
+   //
+   // cvPolyData *centerlines=NULL;
+   // cvPolyData *surf_grouped=NULL;
+   // cvPolyData *sections=NULL;
+   // if ( sys_geom_centerlinesections(tempCenterlines, src, &centerlines, &surf_grouped, &sections) != SV_OK )
+   // {
+   //     delete src;
+   //     delete centerlines;
+   //     delete surf_grouped;
+   //     delete sections;
+   //     return NULL;
+   // }
+   // delete src;
+   // delete surf_grouped;
+   // delete sections;
+   //
+   // return centerlines->GetVtkPolyData();
+
+    // Addition From Ricardo to load and add arrays to the externally generate centerline
     if(inpd==NULL)
         return NULL;
-    // Ricardo Edits
-    // Uncomment from here
-    // cvPolyData *src = new cvPolyData(inpd);
-    // cvPolyData *tempCenterlines = NULL;
-    // cvPolyData *voronoi = NULL;
-    //
-    // int numSourcePts = sourcePtIds->GetNumberOfIds();
-    // int *sources=new int[numSourcePts];
-    // for (int i=0; i<numSourcePts; i++)
-    //   sources[i]=sourcePtIds->GetId(i);
-    //
-    // int numTargetPts = targetPtIds->GetNumberOfIds();
-    // int *targets=new int[numTargetPts];
-    // for (int i=0; i<numTargetPts; i++)
-    //   targets[i]=targetPtIds->GetId(i);
-    //
-    // if ( sys_geom_centerlines(src, sources, numSourcePts, targets, numTargetPts, &tempCenterlines, &voronoi) != SV_OK )
-    // {
-    //     delete src;
-    //     delete [] sources;
-    //     delete [] targets;
-    //     return NULL;
-    // }
-    // delete voronoi;
-    // delete [] sources;
-    // delete [] targets;
-    //
-    // cvPolyData *centerlines=NULL;
-    // cvPolyData *surf_grouped=NULL;
-    // cvPolyData *sections=NULL;
-    // if ( sys_geom_centerlinesections(tempCenterlines, src, &centerlines, &surf_grouped, &sections) != SV_OK )
-    // {
-    //
-    //     delete src;
-    //     delete centerlines;
-    //     delete surf_grouped;
-    //     delete sections;
-    //     return NULL;
-    // }
-    //
-    // Addition From Ricardo to load and add arrays to the externally generate centerline
     cvPolyData *src = new cvPolyData(inpd);
     cvPolyData *tempCenterlines = NULL;
     cvPolyData *voronoi = NULL;
@@ -1250,9 +1257,8 @@ vtkPolyData* sv4guiModelUtils::CreateCenterlineSections(vtkPolyData* inpd,
     vtkSmartPointer<vtkPolyData> surfaceMesh=NULL;
     vtkSmartPointer<vtkPolyData> clMesh=NULL;
     vtkSmartPointer<vtkXMLPolyDataReader> readersurf = vtkSmartPointer<vtkXMLPolyDataReader>::New();
-    // string surfacePath = "/home/riro3277/MTH/317_aorta_S.vtp";
 
-    readersurf->SetFileName("/home/flowlab2/Documents/MTH/P409/P409.vtp");
+    readersurf->SetFileName("/home/flowlab2/Documents/MTH/P142/MTH_142.vtp");
     readersurf->Update();
     surfaceMesh=readersurf->GetOutput();
 
@@ -1260,7 +1266,7 @@ vtkPolyData* sv4guiModelUtils::CreateCenterlineSections(vtkPolyData* inpd,
     vtkSmartPointer<vtkXMLPolyDataReader> readercl = vtkSmartPointer<vtkXMLPolyDataReader>::New();
 
     // string clPath = "/home/riro3277/MTH/317_aorta_CL.vtp";
-    readercl->SetFileName("/home/flowlab2/Documents/MTH/P409/P409_CL_Radv2.vtp");
+    readercl->SetFileName("/home/flowlab2/Documents/MTH/P142/P142_CL_Radv2.vtp");
     readercl->Update();
     clMesh=readercl->GetOutput();
 
@@ -1285,11 +1291,11 @@ vtkPolyData* sv4guiModelUtils::CreateCenterlineSections(vtkPolyData* inpd,
     vtkNew<vtkXMLPolyDataWriter> writer;
     vtkPolyData *output = centerlines->GetVtkPolyData();
     std::cout << "Writer Start" << endl;
-    writer->SetFileName("P409_CL_Final.vtp");
+    writer->SetFileName("P142_CL_Final.vtp");
     writer->SetInputData(output);
     writer->Write();
     std::cout << "Writer End" << endl;
-    
+
     // Process or use the generated centerline sections as needed
     // For example, you might iterate through the sections and perform further operations
     for (const auto& section : centerlineSections) {
