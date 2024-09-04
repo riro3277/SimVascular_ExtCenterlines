@@ -307,7 +307,8 @@ int vtkvmtkPolyDataCenterlineSections::RequestData(
     output->GetCellData()->AddArray(centerlineSectionClosedArray);
     output->GetCellData()->AddArray(centerlineSectionBifurcationArray);
     output->GetCellData()->AddArray(centerlineSectionGlobalNodeIdArray);
-
+    // Writer
+    vtkNew<vtkXMLPolyDataWriter> writer;
     // generate surface normals
     std::cout<<"  Generating surface normals"<<endl;
     vtkNew(vtkPolyDataNormals, surfaceNormals);
@@ -320,14 +321,23 @@ int vtkvmtkPolyDataCenterlineSections::RequestData(
 
     this->Surface->DeepCopy(surfaceNormals->GetOutput());
 
+
+    // Writer
+    writer->SetFileName("P409_CL_PreClean.vtp");
+    writer->SetInputData(this->Centerlines);
+    writer->Write();
     // generate a clean, simply connected centerline
     std::cout<<"  Generating clean centerline"<<endl;
+
     if (this->GenerateCleanCenterline() == SV_ERROR)
     {
         fprintf(stderr,"GenerateCleanCenterline failed");
         return SV_ERROR;
     }
-
+    // Writer
+    writer->SetFileName("P409_CL_PostClean.vtp");
+    writer->SetInputData(this->Centerlines);
+    writer->Write();
     // initialize normal array
     this->Centerlines->GetPointData()->AddArray(centerlineNormalArray);
     int numberOfCenterlinePoints = this->Centerlines->GetNumberOfPoints();
@@ -376,6 +386,11 @@ int vtkvmtkPolyDataCenterlineSections::RequestData(
     centerlineClosedArray->Fill(0);
     centerlineBifurcationArray->Fill(1);
 
+
+    // Writer
+    // writer->SetFileName("P409_CL_PreRoughColoring.vtp");
+    // writer->SetInputData(this->Centerlines);
+    // writer->Write();
     // preliminary color surface according to centerline BranchIdTmp to allow bifurcation detection
     std::cout<<"  Rough coloring surface branches"<<endl;
     if (this->BranchSurface(this->BranchIdArrayNameTmp, this->BifurcationIdArrayNameTmp) == SV_ERROR)
@@ -383,7 +398,15 @@ int vtkvmtkPolyDataCenterlineSections::RequestData(
         fprintf(stderr,"BranchSurface failed\n");
         return SV_ERROR;
     }
+    // Writer
+    // writer->SetFileName("P409_CL_PostRoughColoring.vtp");
+    // writer->SetInputData(this->Centerlines);
+    // writer->Write();
 
+    // Writer
+    // writer->SetFileName("P409_CL_PreCLSections.vtp");
+    // writer->SetInputData(this->Centerlines);
+    // writer->Write();
     // slice centerline to get cross-sectional area and detect bifurcation regions
     std::cout<<"  Slicing surface at "<<this->Centerlines->GetNumberOfPoints()<<" centerline points"<<endl;
     if (this->ComputeCenterlineSections(output) == SV_ERROR)
@@ -391,7 +414,15 @@ int vtkvmtkPolyDataCenterlineSections::RequestData(
         fprintf(stderr,"ComputeCenterlineSections failed\n");
         return SV_ERROR;
     }
+    // Writer
+    // writer->SetFileName("P409_CL_PostCLSections.vtp");
+    // writer->SetInputData(this->Centerlines);
+    // writer->Write();
 
+    // Writer
+    // writer->SetFileName("P409_CL_PreCleanBifur.vtp");
+    // writer->SetInputData(this->Centerlines);
+    // writer->Write();
     // clean up centerline bifurcation detection
     std::cout<<"  Cleaning centerline bifurcations"<<endl;
     if (this->CleanBifurcation() == SV_ERROR)
@@ -399,7 +430,15 @@ int vtkvmtkPolyDataCenterlineSections::RequestData(
         fprintf(stderr,"CleanBifurcation failed\n");
         return SV_ERROR;
     }
+    // Writer
+    // writer->SetFileName("P409_CL_PostCleanBifur.vtp");
+    // writer->SetInputData(this->Centerlines);
+    // writer->Write();
 
+    // Writer
+    // writer->SetFileName("P409_CL_PreGroupCL.vtp");
+    // writer->SetInputData(this->Centerlines);
+    // writer->Write();
     // split into bifurcations and branches
     std::cout<<"  Splitting centerline in branches and bifurcations"<<endl;
     if (this->GroupCenterline() == SV_ERROR)
@@ -408,6 +447,15 @@ int vtkvmtkPolyDataCenterlineSections::RequestData(
         return SV_ERROR;
     }
 
+    // Writer
+    // writer->SetFileName("P409_CL_PostGroupCL.vtp");
+    // writer->SetInputData(this->Centerlines);
+    // writer->Write();
+
+    // Writer
+    // writer->SetFileName("P409_CL_PreColoringSurface.vtp");
+    // writer->SetInputData(this->Centerlines);
+    // writer->Write();
     // final color surface according to centerline BranchId and BifurcationId
     std::cout<<"  Coloring surface branches"<<endl;
     if (this->BranchSurface(this->BranchIdArrayName, this->BifurcationIdArrayName) == SV_ERROR)
@@ -416,13 +464,20 @@ int vtkvmtkPolyDataCenterlineSections::RequestData(
         return SV_ERROR;
     }
 
+    // Writer
+    // writer->SetFileName("P409_CL_PostColoringSurface.vtp");
+    // writer->SetInputData(this->Centerlines);
+    // writer->Write();
     std::cout<<"  Coloring surface bifurcations"<<endl;
     if (this->BranchSurface(this->BifurcationIdArrayName, this->BranchIdArrayName) == SV_ERROR)
     {
         fprintf(stderr,"BranchSurface failed\n");
         return SV_ERROR;
     }
-
+    // Writer
+    // writer->SetFileName("P409_CL_PostColoringSurfaceBifurcations.vtp");
+    // writer->SetInputData(this->Centerlines);
+    // writer->Write();
     std::cout<<"  Done!"<<endl;
     return SV_OK;
 }
@@ -432,7 +487,11 @@ int vtkvmtkPolyDataCenterlineSections::CleanBifurcation()
 {
     // modify this array to ensure bifurcations are only where they should be
     vtkIntArray* isBifurcation = vtkIntArray::SafeDownCast(this->Centerlines->GetPointData()->GetArray(this->CenterlineSectionBifurcationArrayName));
-
+    // Writer
+    // vtkNew<vtkXMLPolyDataWriter> writer;
+    // writer->SetFileName("P409_CL_PreCleanBifur.vtp");
+    // writer->SetInputData(this->Centerlines);
+    // writer->Write();
     // record which centerline points to remove
     char* removeArrayName = "CenterlineSectionRemove";
     vtkNew(vtkIntArray, removeArray);
@@ -599,6 +658,10 @@ int vtkvmtkPolyDataCenterlineSections::CleanBifurcation()
     }
 
     this->Centerlines->DeepCopy(polydata);
+    // Writer
+    // writer->SetFileName("P409_CL_PostCleanBifur.vtp");
+    // writer->SetInputData(polydata);
+    // writer->Write();
 
     return SV_OK;
 }
@@ -606,6 +669,11 @@ int vtkvmtkPolyDataCenterlineSections::CleanBifurcation()
 
 int vtkvmtkPolyDataCenterlineSections::GroupCenterline()
 {
+    // Writer
+    // vtkNew<vtkXMLPolyDataWriter> writer;
+    // writer->SetFileName("P409_CL_PreGroupCenterline.vtp");
+    // writer->SetInputData(this->Centerlines);
+    // writer->Write();
     // split centerline in bifurcations and branches
     vtkNew(vtkPolyData, bifurcations);
     vtkNew(vtkPolyData, branches);
@@ -694,6 +762,10 @@ int vtkvmtkPolyDataCenterlineSections::GroupCenterline()
         sortArray->DeepCopy(globalIdArrayInverse);
         sort->Sort(sortArray, polydata_ordered->GetPointData()->GetAbstractArray(i));
     }
+    // Writer
+    // writer->SetFileName("P409_CL_PsotGroupCenterline.vtp");
+    // writer->SetInputData(polydata_ordered);
+    // writer->Write();
     this->Centerlines->DeepCopy(polydata_ordered);
 
     return SV_OK;
@@ -855,6 +927,11 @@ int vtkvmtkPolyDataCenterlineSections::ComputeCenterlineSections(vtkPolyData* ou
 
     vtkNew(vtkIdList, cellIds);
     double point[3], tangent[3];
+    // Writer
+    // vtkNew<vtkXMLPolyDataWriter> writer;
+    // writer->SetFileName("P409_CL_PreCenterlineSections.vtp");
+    // writer->SetInputData(this->Centerlines);
+    // writer->Write();
     const int n_point = this->Centerlines->GetNumberOfPoints();
 
     // loop all centerline points
@@ -943,6 +1020,10 @@ int vtkvmtkPolyDataCenterlineSections::ComputeCenterlineSections(vtkPolyData* ou
         centerlineClosedArray->InsertValue(p,closed);
         centerlineBifurcationArray->InsertValue(p,bifurcation);
     }
+    // Writer
+    // writer->SetFileName("P409_CL_PostCenterlineSections.vtp");
+    // writer->SetInputData(this->Centerlines);
+    // writer->Write();
 
     return SV_OK;
 }
@@ -962,6 +1043,12 @@ int vtkvmtkPolyDataCenterlineSections::BranchSurface(char* nameThis, char* nameO
         return SV_ERROR;
     }
 
+
+    // Ricardo Writer
+    // vtkNew<vtkXMLPolyDataWriter> writer;
+    // writer->SetFileName("P409_CL_PreBranchSurf.vtp");
+    // writer->SetInputData(this->Centerlines);
+    // writer->Write();
     // output id array
     vtkNew(vtkIntArray, thisSurf);
     thisSurf->SetName(nameThis);
@@ -1037,6 +1124,10 @@ int vtkvmtkPolyDataCenterlineSections::BranchSurface(char* nameThis, char* nameO
             }
         }
     }
+    // Ricardo Writer
+    // writer->SetFileName("P409_CL_PostBranchSurf.vtp");
+    // writer->SetInputData(this->Centerlines);
+    // writer->Write();
 
     return SV_OK;
 }
@@ -1050,6 +1141,10 @@ int vtkvmtkPolyDataCenterlineSections::GenerateCleanCenterline()
     cleaner->PointMergingOn();
     cleaner->Update();
     vtkPolyData* centerlines = cleaner->GetOutput();
+    // vtkNew<vtkXMLPolyDataWriter> writer;
+    // writer->SetFileName("P409_CL_PreClean.vtp");
+    // writer->SetInputData(centerlines);
+    // writer->Write();
     this->n_centerlines = centerlines->GetNumberOfCells();
 
     // check if geometry is one piece
@@ -1135,6 +1230,9 @@ int vtkvmtkPolyDataCenterlineSections::GenerateCleanCenterline()
     // polydata->SetPoints(points);
     // polydata->SetLines(lines);
     // polydata->Modified();
+    // writer->SetFileName("P409_CL_PostClean.vtp");
+    // writer->SetInputData(polydata);
+    // writer->Write();
     vtkPolyData* polydata = cleaner->GetOutput();
 
     // check mesh consistency
@@ -1165,7 +1263,8 @@ int vtkvmtkPolyDataCenterlineSections::GenerateCleanCenterline()
     polydata->GetPointData()->AddArray(branch);
     polydata->GetPointData()->AddArray(radius);
     polydata->GetPointData()->AddArray(nodeId);
-    polydata->GetPointData()->AddArray(centId);
+    // Ricardo - Done in pre-processing. Commented out line below
+    // polydata->GetPointData()->AddArray(centId);
 
     // go through tree and color each branch/bifurcation
     vtkNew(vtkIdList, cellIds);
